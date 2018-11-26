@@ -49,6 +49,11 @@ CMake creates a target to this project
 
   <Target Name="CreatePackage" AfterTargets="RunTest">
     <Message Importance="High" Text="Bundling NuGet package ..." />
+    <Message Importance="High" Text="OutputPath=$(OutputPath), Platform=$(Platform), Configuration=$(Configuration)"/>
+    <!--PropertyGroup>
+      <OutputPath>bin\$(Platform)\$(Configuration)\</OutputPath>
+    </PropertyGroup-->
+    <Message Importance="High" Text="After explicit setting, OutputPath=$(OutputPath)"/>
     <MSBuild Projects="src\Microsoft.ML.OnnxRuntime\Microsoft.ML.OnnxRuntime.csproj"
              Targets="ObtainPackageVersion;Pack"
              Properties="NoBuild=true"
