@@ -67,9 +67,15 @@ namespace Microsoft.ML.OnnxRuntime
         private static SessionOptions MakeSessionOptionWithMklDnnProvider()
         {
             SessionOptions options = new SessionOptions();
-            options.AppendExecutionProvider(MklDnnExecutionProviderFactory.Default);
-            options.AppendExecutionProvider(CpuExecutionProviderFactory.Default);
-
+            try 
+            {
+                options.AppendExecutionProvider(MklDnnExecutionProviderFactory.Default);
+                options.AppendExecutionProvider(CpuExecutionProviderFactory.Default);
+            }
+            catch(OnnxRuntimeException e)
+            {
+                //TODO: Log the exception as a message, but still continue without throwing
+            }
             return options;
         }
 
@@ -90,10 +96,15 @@ namespace Microsoft.ML.OnnxRuntime
                 providerFactory.DangerousAddRef(ref success);
                 if (success)
                 {
-                    NativeMethods.ONNXRuntimeSessionOptionsAppendExecutionProvider(_nativeOption.DangerousGetHandle(), providerFactory.DangerousGetHandle());
-                    providerFactory.DangerousRelease();
+                    try 
+                    {
+                        NativeMethods.ONNXRuntimeSessionOptionsAppendExecutionProvider(_nativeOption.DangerousGetHandle(), providerFactory.DangerousGetHandle());
+                    }
+                    finally
+                    {
+                        providerFactory.DangerousRelease();
+                    }
                 }
-
             }
         }
 
