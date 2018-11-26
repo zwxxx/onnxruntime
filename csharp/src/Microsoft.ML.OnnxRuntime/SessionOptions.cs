@@ -72,9 +72,16 @@ namespace Microsoft.ML.OnnxRuntime
                 options.AppendExecutionProvider(MklDnnExecutionProviderFactory.Default);
                 options.AppendExecutionProvider(CpuExecutionProviderFactory.Default);
             }
-            catch(OnnxRuntimeException e)
+            catch(Exception e)
             {
-                //TODO: Log the exception as a message, but still continue without throwing
+                if (e is TypeLoadException || e is OnnxRuntimeException)
+                {
+                    //TODO: Log the exception as a message, but still continue without throwing
+                }
+                else
+                {
+                    throw e;
+                }
             }
             return options;
         }
