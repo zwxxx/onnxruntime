@@ -17,19 +17,29 @@ namespace Microsoft.ML.OnnxRuntime.PerfTool
 
             timestamps[(int)TimingPoint.Start] = DateTime.Now;
 
-            var modelName = "lotusrt_squeezenet";
+            var modelName = "MyModel";
             using (var modelManager = new ModelManager(modelPath, true))
             {
                 modelManager.InitOnnxModel(modelName, int.MaxValue);
                 timestamps[(int)TimingPoint.ModelLoaded] = DateTime.Now;
 
-                Tensor[] inputs = new Tensor[1];
-                var inputShape = new long[] { 1, 3, 224, 224 };   // hardcoded values
-                
-                float[] inputData0 = Program.LoadTensorFromFile(inputPath);
-                inputs[0] = Tensor.Create(inputData0, inputShape);
-                string[] inputNames = new string[] {"data_0"};
-                string[] outputNames = new string[] { "softmaxout_1" };
+                //var inputType = modelManager.GetInputTypeDict("MyModel", int.MaxValue);
+
+                var inputShapes = modelManager.GetInputShapesDict("MyModel", int.MaxValue);
+                Tensor[] inputs = new Tensor[inputShapes.Count];
+                string[] inputNames = new string[inputShapes.Count];
+                inputShapes.Keys.CopyTo(inputNames, 0);
+                var outputTypes = modelManager.GetOutputTypeDict("MyModel", int.MaxValue);
+                string[] outputNames = new string[outputTypes.Keys.Count];
+                outputTypes.Keys.CopyTo(outputNames, 0);
+
+                int index = 0;
+                foreach (var name in inputShapes.Keys)
+                {
+                    long[] shape = inputShapes[name];
+                    float[] inputData0 = Program.LoadTensorFromFile(inputPath);
+                    inputs[index++] = Tensor.Create(inputData0, shape);
+                }
 
                 timestamps[(int)TimingPoint.InputLoaded] = DateTime.Now;
 
@@ -48,11 +58,6 @@ namespace Microsoft.ML.OnnxRuntime.PerfTool
 
                 timestamps[(int)TimingPoint.RunComplete] = DateTime.Now;
             }
-
-
-
         }
-
-
     }
 }

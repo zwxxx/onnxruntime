@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(NativeBuildOutputDir)\onnxruntime.dll">
+    <!--None Include="$(NativeBuildOutputDir)\onnxruntime.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
@@ -21,7 +21,7 @@
     <None Include="$(NativeBuildOutputDir)\mkldnn.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
-    </None>
+    </None-->
     <None Include="$(OnnxRuntimeCSharpRoot)\testdata\*">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <Visible>false</Visible>
@@ -30,7 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(OnnxRuntimeCSharpRoot)\src\Microsoft.ML.OnnxRuntime\Microsoft.ML.OnnxRuntime.csproj" />
+    <!--ProjectReference Include="$(OnnxRuntimeCSharpRoot)\src\Microsoft.ML.OnnxRuntime\Microsoft.ML.OnnxRuntime.csproj" /-->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="0.1.4" />
     <PackageReference Include="Microsoft.ML.Scoring" Version="1.1.0" />
   </ItemGroup>
 
