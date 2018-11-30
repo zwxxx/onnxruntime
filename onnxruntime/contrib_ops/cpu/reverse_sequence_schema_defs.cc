@@ -54,7 +54,7 @@ OpSchema& RegisterReverseSequenceOpSchema(OpSchema&& op_schema){
         1,
         "seq_lengths",
         "Either scalar of int32/int64, or 1D Tensor of [batch_size].",
-        "T1")
+        "TIndex")
     .Output(
         0,
         "Y",
