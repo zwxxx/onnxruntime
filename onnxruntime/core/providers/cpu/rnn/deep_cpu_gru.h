@@ -51,6 +51,16 @@ class DeepCpuGruOp final : public OpKernel {
     activation_funcs_ = rnn::detail::ActivationFuncs(activation_func_names,
                                                      activation_func_alphas,
                                                      activation_func_betas);
+
+    // If weight is initializer, do a weight transpose and save it for compute use.
+    const Tensor* W;
+    const Tensor* R;
+    bool get_W = info.TryGetConstantInput(1, &W);
+    bool get_R = info.TryGetConstantInput(2, &R);
+    if (get_W && get_R) {
+      AllocatorPtr alloc = info.GetExecutionProvider()->GetAllocator(0, ONNXRuntimeMemType::ONNXRuntimeMemTypeDefault);
+      TryTransposeWeight(W, R, alloc);
+    }
   }
 
   Status Compute(OpKernelContext* context) const override;
@@ -75,6 +85,12 @@ class DeepCpuGruOp final : public OpKernel {
 
   template <typename T>
   Status ComputeImpl(OpKernelContext& context) const;
+
+  Status TryTransposeWeight(const Tensor* W, const Tensor* R, AllocatorPtr& alloc);
+
+  // Whether transposed weights have been updated or not.
+  bool transpose_weight_updated = false;
+  IAllocatorUniquePtr<float> weights_transpose_data, recurrent_weights_transpose_data;
 };
 
 }  // namespace onnxruntime
