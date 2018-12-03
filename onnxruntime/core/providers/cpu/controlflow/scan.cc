@@ -811,7 +811,7 @@ Status ScanImpl::IterateSequence(std::vector<LoopStateVariable>& loop_state_vari
     // Not sure how best to handle the memory pattern side of things though.
     // For now just making it work. Optimization and refinement will follow.
     SequentialExecutor executor{context_.GetTerminateFlag()};
-    status = executor.Execute(session_state_, feeds, subgraph_output_names_, fetches, context_.Logger());
+    status = executor.Execute(session_state_, feeds, subgraph_output_names_, fetches, {}, context_.Logger());
     ONNXRUNTIME_RETURN_IF_ERROR(status);
 
     // cycle the LoopStateVariable input/output in preparation for the next iteration

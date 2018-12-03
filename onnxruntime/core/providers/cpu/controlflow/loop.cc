@@ -317,7 +317,7 @@ Status LoopImpl::Execute() {
     }
 
     SequentialExecutor executor{context_.GetTerminateFlag()};
-    status = executor.Execute(session_state_, feeds, subgraph_output_names_, fetches, context_.Logger());
+    status = executor.Execute(session_state_, feeds, subgraph_output_names_, fetches, {}, context_.Logger());
     ONNXRUNTIME_RETURN_IF_ERROR(status);
 
     condition_mlvalue_ = fetches[0];

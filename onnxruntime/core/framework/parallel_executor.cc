@@ -30,10 +30,11 @@ Status ParallelExecutor::Execute(const SessionState& session_state,
                                  const NameMLValMap& feeds,
                                  const std::vector<std::string>& output_names,
                                  std::vector<MLValue>& fetches,
+                                 const std::unordered_map<size_t, CustomAllocator> fetch_allocators,
                                  const logging::Logger& logger) {
   auto tp = session_state.Profiler().StartTime();
 
-  root_frame_ = std::make_unique<ExecutionFrame>(feeds, output_names, fetches, session_state);
+  root_frame_ = std::make_unique<ExecutionFrame>(feeds, output_names, fetches, fetch_allocators, session_state);
   //std::cout << "start nodes:" << std::endl;
   for (auto node_index : session_state.GetGraphViewer()->GetRootNodes()) {
     auto p_op_kernel = session_state.GetKernel(node_index);
@@ -51,7 +52,8 @@ Status ParallelExecutor::Execute(const SessionState& session_state,
   }
 
   VLOGS(logger, 1) << "Fetching output.";
-  ONNXRUNTIME_RETURN_IF_ERROR(FetchOutput(session_state.GetMLValueNameIdxMap(), *root_frame_, output_names, fetches, logger));
+  ONNXRUNTIME_RETURN_IF_ERROR(
+      FetchOutput(session_state.GetMLValueNameIdxMap(), *root_frame_, output_names, fetches, logger));
 
   if (root_frame_->HasPlan()) {
     std::vector<TensorShape> input_shapes;
@@ -83,7 +85,7 @@ void ParallelExecutor::RunNodeAsync(size_t p_node_index,
     RunNodeAsyncInternal(p_node_index, session_state, logger);
   } catch (...) {
     FinishNodeRun();
-	throw;
+    throw;
   }
 }
 
@@ -214,7 +216,9 @@ void ParallelExecutor::RunNodeAsyncInternal(size_t p_node_index,
           }
         }
 
-        //std::cout << "handle output, current name: " << p_op_kernel->Node().Name() << ", current index: " << p_node_index << ", output name: " << (*it)->GetNode().Name() << ", output index: " << (*it)->GetNode().Index() << ", after -- output ref: " << node_refs_[idx] << std::endl;
+        // std::cout << "handle output, current name: " << p_op_kernel->Node().Name() << ", current index: "
+        // << p_node_index << ", output name: " << (*it)->GetNode().Name() << ", output index: "
+        // << (*it)->GetNode().Index() << ", after -- output ref: " << node_refs_[idx] << std::endl;
       }
     }
   }
@@ -222,10 +226,12 @@ void ParallelExecutor::RunNodeAsyncInternal(size_t p_node_index,
   FinishNodeRun();
 }
 
-void ParallelExecutor::EnqueueNode(size_t p_node_index, const SessionState& session_state, const logging::Logger& logger) {
+void ParallelExecutor::EnqueueNode(size_t p_node_index, const SessionState& session_state,
+                                   const logging::Logger& logger) {
   out_standings_++;
   //std::cout << "Enqueue async node: " << p_node_index << ", out_standings: " << out_standings_ << std::endl;
-  std::packaged_task<void()> task{std::bind(&ParallelExecutor::RunNodeAsync, this, p_node_index, std::cref(session_state), std::cref(logger))};
+  std::packaged_task<void()> task{
+      std::bind(&ParallelExecutor::RunNodeAsync, this, p_node_index, std::cref(session_state), std::cref(logger))};
   session_state.GetThreadPool()->RunTask(std::move(task));
 }
 

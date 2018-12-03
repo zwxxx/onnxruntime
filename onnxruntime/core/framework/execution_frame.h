@@ -8,6 +8,7 @@
 #include "core/common/common.h"
 #include "core/common/logging/logging.h"
 #include "core/common/status.h"
+#include "core/framework/iexecutor.h"
 #include "core/framework/ml_value.h"
 #include "core/framework/sequential_execution_plan.h"
 #include "core/framework/tensor.h"
@@ -29,6 +30,8 @@ class ExecutionFrame {
   ExecutionFrame(const std::unordered_map<std::string, MLValue>& feeds,
                  const std::vector<std::string>& output_names,
                  const std::vector<MLValue>& fetches,
+                 // optional custom allocators. key is index in fetches
+                 const std::unordered_map<size_t, IExecutor::CustomAllocator>& fetch_allocators,
                  const SessionState& session_state);
 
   ~ExecutionFrame();
@@ -100,7 +103,7 @@ class ExecutionFrame {
 
   Status ReleaseMLValue(int mlvalue_idx);
 
-  const ::onnxruntime::SessionState& SessionState() const {
+  const SessionState& GetSessionState() const {
     return session_state_;
   }
 
@@ -128,7 +131,8 @@ class ExecutionFrame {
   void Init(const onnxruntime::GraphViewer& graph,
             const std::unordered_map<std::string, MLValue>& feeds,
             const std::vector<std::string>& output_names,
-            const std::vector<MLValue>& fetches);
+            const std::vector<MLValue>& fetches,
+            const std::unordered_map<size_t, IExecutor::CustomAllocator>& fetch_allocators);
 
   void SetupNodeArg(const onnxruntime::NodeArg* arg);
 
@@ -162,7 +166,10 @@ class ExecutionFrame {
 
   std::unordered_map<std::string, int> value_name_to_index_;
 
-  const ::onnxruntime::SessionState& session_state_;
+  // map of index to custom allocator
+  std::unordered_map<int, IExecutor::CustomAllocator> custom_allocators_;
+
+  const SessionState& session_state_;
 
   // If we already have cached memory pattern on these input shapes
   // Use this mem pattern that create a big chunk for all the internal
