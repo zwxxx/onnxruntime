@@ -784,6 +784,10 @@ const NodeArg* Graph::GetNodeArgIncludingParentGraphs(const std::string& node_ar
 }
 
 void Graph::AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg) {
+  AddEdge(src_node_index, dst_node_index, node_arg, node_arg);
+}
+
+void Graph::AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg, const NodeArg& dst_old_node_arg) {
   if (nodes_.size() <= src_node_index ||
       nodes_.size() <= dst_node_index ||
       nullptr == nodes_[src_node_index] ||
@@ -791,7 +795,7 @@ void Graph::AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const No
     // Invalid node indexes specified.
     ONNXRUNTIME_THROW("Invalid node indexes specified when adding edge.");
   }
-  // Verify whether the node_arg is input of dst and output of src firstly.
+  // Verify that the node_arg is input of dst and output of src firstly.
   bool valid = false;
   for (auto arg : nodes_[src_node_index]->OutputDefs()) {
     if (arg == &node_arg) {
@@ -801,19 +805,34 @@ void Graph::AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const No
   }
   ONNXRUNTIME_ENFORCE(valid);
   valid = false;
-  for (auto arg : nodes_[dst_node_index]->InputDefs()) {
-    if (arg == &node_arg) {
-      valid = true;
-      break;
+  // If node_arg is different from dst_old_node_arg in the dst node, first replace
+  // the old node_arg with the new one.
+  if (&node_arg != &dst_old_node_arg) {
+    for (auto& def : nodes_[dst_node_index]->MutableInputDefs()) {
+      if (def == &dst_old_node_arg) {
+        def = GetNodeArg(node_arg.Name());
+        valid = true;
+        break;
+      }
     }
-  }
-  for (auto arg : nodes_[dst_node_index]->ImplicitInputDefs()) {
-    if (arg == &node_arg) {
-      valid = true;
-      break;
+    ONNXRUNTIME_ENFORCE(valid);
+    valid = false;
+  } else {
+    // Verify that the node_arg is an input of dst node.
+    for (auto arg : nodes_[dst_node_index]->InputDefs()) {
+      if (arg == &node_arg) {
+        valid = true;
+        break;
+      }
     }
+    for (auto arg : nodes_[dst_node_index]->ImplicitInputDefs()) {
+      if (arg == &node_arg) {
+        valid = true;
+        break;
+      }
+    }
+    ONNXRUNTIME_ENFORCE(valid);
   }
-  ONNXRUNTIME_ENFORCE(valid);
   nodes_[dst_node_index]->MutableRelationships().input_edges.insert(Node::EdgeEnd(*nodes_[src_node_index], node_arg));
   nodes_[src_node_index]->MutableRelationships().output_edges.insert(Node::EdgeEnd(*nodes_[dst_node_index], node_arg));
 }

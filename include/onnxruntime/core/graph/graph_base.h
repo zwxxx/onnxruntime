@@ -600,6 +600,14 @@ class Graph {
   */
   void AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg);
 
+  /** Add an edge between two Nodes after replacing the input NodeArg of the destination Node with the new NodeArg.
+  @param src_node_index NodeIndex of source Node that is providing output to the destination Node.
+  @param dst_node_index NodeIndex of destination Node that is receiving input from the source Node.
+  @param node_arg NodeArg to use for the edge.
+  @param dst_old_node_arg NodeArg of the dst_node_index that will be replaced with the node_arg.
+  */
+  void AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg, const NodeArg& dst_old_node_arg);
+
   /** Remove an edge between two Nodes.
   @param src_node_index NodeIndex of source Node to remove an output edge from.
   @param dst_node_index NodeIndex of destination Node to remove an input edge from.

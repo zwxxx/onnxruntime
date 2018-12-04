@@ -37,6 +37,21 @@ class GraphEditor {
     return graph_.RemoveNode(node_index);
   }
 
+  /** Add an edge to to the Graph. */
+  void AddEdge(NodeIndex src_node_index,
+               NodeIndex dst_node_index,
+               const NodeArg& node_arg,
+               const NodeArg& dst_old_node_arg) {
+    graph_.AddEdge(src_node_index, dst_node_index, node_arg, dst_old_node_arg);
+  }
+
+  /** Remove an edge from the Graph. */
+  void RemoveEdge(NodeIndex src_node_index,
+                  NodeIndex dst_node_index,
+                  const NodeArg& node_arg) {
+    graph_.RemoveEdge(src_node_index, dst_node_index, node_arg);
+  }
+
   /** Add a control edge between two Nodes in the Graph
   The <dst> node does not consume any data output by <src>, so there is no input/output edge between them, 
   but dst must executed after src so a control edge is required.
@@ -52,6 +67,63 @@ class GraphEditor {
   @remarks Resolve must be called after modifying the Graph is completed. */
   common::Status Resolve() {
     return graph_.Resolve();
+  }
+
+  // TODO: The following functions should probably be moved to the Graph and Node classes.
+  // We also need to decide whether we keep the GraphEditor or we pass directly the Graph.
+  // If we keep it, it might be better to put it in a separate file.
+
+  /** Check whether the node has a single input and a single output. */
+  bool IsSingleInSingleOutNode(const Node& node) const {
+    return node.GetInputEdgesCount() == 1 && node.GetOutputEdgesCount() == 1;
+  }
+
+  /** Return the attribute of a Node. */
+  const onnx::AttributeProto* GetNodeAttribute(
+      const Node& node, const std::string& attr_name) const {
+    const auto& attrs = node.GetAttributes();
+    const auto iter = attrs.find(attr_name);
+    return iter == attrs.end() ? nullptr : &iter->second;
+  }
+
+  /** Retrieve the values for a repeated attribute of a node and places them to the values vector. */
+  template <typename T>
+  bool GetRepeatedNodeAttributeValues(
+      const Node& node, std::string attr_name, std::vector<T>& values) const {
+    const auto* attr = GetNodeAttribute(node, attr_name);
+    if (attr) {
+      values = onnx::RetrieveValues<T>(*attr);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /** Remove the given single-input-single-output Node from the Graph. */
+  bool RemoveSingleInSingleOutNode(NodeIndex node_to_remove) {
+    Node* node = graph_.GetNode(node_to_remove);
+    if (node == nullptr || !IsSingleInSingleOutNode(*node)) {
+      return false;
+    }
+    // Get input/output edges and nodes.
+    const Node::EdgeEnd& input_edge = *node->InputEdgesBegin();
+    const Node::EdgeEnd& output_edge = *node->OutputEdgesBegin();
+    NodeIndex input_node_index = input_edge.GetNode().Index();
+    NodeIndex output_node_index = output_edge.GetNode().Index();
+
+    // Remove input edge
+    RemoveEdge(input_node_index, node->Index(), *input_edge.GetNodeArg());
+
+    // Remove output edge
+    RemoveEdge(node->Index(), output_node_index, *output_edge.GetNodeArg());
+
+    // Remove node
+    RemoveNode(node->Index());
+
+    // Add new edge connecting the input with the output nodes directly
+    AddEdge(input_node_index, output_node_index, *input_edge.GetNodeArg(), *output_edge.GetNodeArg());
+
+    return true;
   }
 
  private:
@@ -95,7 +167,7 @@ class RewriteRule {
   @param[out] modified Set to indicate whether the node was modified or not.
   @returns Status indicating success or providing error information */
   common::Status CheckConditionAndApply(GraphEditor& graph_editor, Node& node, bool& modified) {
-    return SatisfyCondition(node) ? Apply(graph_editor, node, modified) : Status::OK();
+    return SatisfyCondition(graph_editor, node) ? Apply(graph_editor, node, modified) : Status::OK();
   }
 
  private:
@@ -108,7 +180,7 @@ class RewriteRule {
   The rewrite rule is applied if the condition function returns true. This can include
   a more complex pattern matching (conditions on the ascending or descending nodes of the
   node for which this rule was triggered) or some other properties of the nodes. */
-  virtual bool SatisfyCondition(const Node& node) = 0;
+  virtual bool SatisfyCondition(const GraphEditor& graph_editor, const Node& node) = 0;
 
   /**
   Apply the rewrite rule to a specific node.

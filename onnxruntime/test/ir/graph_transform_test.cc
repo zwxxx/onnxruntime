@@ -5,7 +5,9 @@
 #include "core/graph/graph.h"
 #include "core/graph/model.h"
 #include "core/graph/graph_transformer.h"
+#include "core/graph/graph_transformer_mgr.h"
 #include "core/graph/identity_elimination.h"
+#include "core/graph/slice_elimination.h"
 #include "core/graph/unsqueeze_elimination.h"
 #include "core/graph/conv_bn_fusion.h"
 #include "core/graph/conv_mul_fusion.h"
@@ -24,34 +26,74 @@ namespace onnxruntime {
 namespace test {
 
 static const std::string MODEL_FOLDER = "testdata/transform/";
+static const std::string SESSION_ID = "GraphTransformationTests.LoadModelToTransform";
+
+// Returns a map with the number of occurrences of each operator in the graph.
+// Helper function to check that the graph transformations have been successfully applied.
+std::map<std::string, int> CountOpsInGraph(const Graph& graph) {
+  std::map<std::string, int> op_to_count;
+  for (auto& node : graph.Nodes()) {
+    op_to_count[node.OpType()] =
+        op_to_count.count(node.OpType()) == 0 ? 1 : ++op_to_count[node.OpType()];
+  }
+  return op_to_count;
+}
 
 TEST(GraphTransformationTests, IdentityElimination) {
   string model_uri = MODEL_FOLDER + "abs-id-max.onnx";
+  std::shared_ptr<Model> model;
+  ASSERT_TRUE(Model::Load(model_uri, model).IsOK());
+  Graph& graph = model->MainGraph();
 
-  SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
-  InferenceSession session_object{so, &DefaultLoggingManager()};
-  ASSERT_TRUE(session_object.Load(model_uri).IsOK());
+  std::map<std::string, int> op_to_count = CountOpsInGraph(graph);
+  ASSERT_TRUE(op_to_count["Identity"] == 1);
 
-  std::shared_ptr<Model> p_model;
-  ASSERT_TRUE(Model::Load(model_uri, p_model).IsOK());
-  //Graph& p_graph = p_model->MainGraph();
+  std::unique_ptr<TopDownRuleBasedTransformer> rule_transformer =
+      std::make_unique<TopDownRuleBasedTransformer>("RuleTransformer", "Test rule transformer");
+
+  rule_transformer->Register("Identity", std::make_unique<EliminateIdentity>());
+
+  onnxruntime::GraphTransformerManager graph_transformation_mgr{5};
+
+  graph_transformation_mgr.Register(std::move(rule_transformer));
+
+  ASSERT_TRUE(graph_transformation_mgr.ApplyAll(graph).IsOK());
+
+  // Make sure identity nodes were removed.
+  op_to_count = CountOpsInGraph(graph);
+  ASSERT_TRUE(op_to_count["Identity"] == 0);
+}
+
+TEST(GraphTransformationTests, SliceElimination) {
+  string model_uri = MODEL_FOLDER + "slice-elim.onnx";
+  std::shared_ptr<Model> model;
+  ASSERT_TRUE(Model::Load(model_uri, model).IsOK());
+  Graph& graph = model->MainGraph();
+
+  std::map<std::string, int> op_to_count = CountOpsInGraph(graph);
+  ASSERT_TRUE(op_to_count["Slice"] == 5);
 
   std::unique_ptr<TopDownRuleBasedTransformer> rule_transformer =
       std::make_unique<TopDownRuleBasedTransformer>("RuleTransformer1", "First rule transformer");
 
-  rule_transformer->Register("Identity", std::make_unique<EliminateIdentity>());
+  rule_transformer->Register("Slice", std::make_unique<EliminateSlice>());
 
-  session_object.RegisterGraphTransformer(std::move(rule_transformer));
+  onnxruntime::GraphTransformerManager graph_transformation_mgr{5};
 
-  ASSERT_TRUE(session_object.Initialize().IsOK());
+  graph_transformation_mgr.Register(std::move(rule_transformer));
+
+  ASSERT_TRUE(graph_transformation_mgr.ApplyAll(graph).IsOK());
+
+  // Make sure slice nodes were removed.
+  op_to_count = CountOpsInGraph(graph);
+  ASSERT_TRUE(op_to_count["Slice"] == 3);
 }
 
 TEST(GraphTransformationTests, FuseConvBNMulAddUnsqueeze) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-bn-mul-add-unsqueeze.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
@@ -75,7 +117,7 @@ TEST(GraphTransformationTests, FuseConvBNNoBias) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-bn-no-bias.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
@@ -93,7 +135,7 @@ TEST(GraphTransformationTests, FuseConvMulNoBias) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-mul-no-bias.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
@@ -113,7 +155,7 @@ TEST(GraphTransformationTests, FuseConvAddNoBias) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-add-no-bias.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
@@ -133,7 +175,7 @@ TEST(GraphTransformationTests, FuseConvBNMulAddUnsqueezeNoBias) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-bn-mul-add-unsqueeze-no-bias.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
@@ -157,7 +199,7 @@ TEST(GraphTransformationTests, FuseConvAddMul3D) {
   string model_uri = MODEL_FOLDER + "fusion/fuse-conv-add-mul-3d.onnx";
 
   SessionOptions so;
-  so.session_logid = "GraphTransformationTests.LoadModelToTransform";
+  so.session_logid = SESSION_ID;
   InferenceSession session_object{so, &DefaultLoggingManager()};
   ASSERT_TRUE(session_object.Load(model_uri).IsOK());
 
