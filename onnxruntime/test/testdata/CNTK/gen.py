@@ -134,6 +134,19 @@ def GenLSTMx4(use_scan):
     data_feature = np.random.rand(1,64,128).astype(np.float32)
     data_output = np.asarray(model.eval(data_feature))
     Save('test_LSTMx4_' + postfix, model, data_feature, data_output)
+    
+def GenScan():
+    np.random.seed(0)
+    feature = C.sequence.input_variable((3,), np.float32)
+    model = C.layers.For(range(4), lambda : C.layers.Recurrence(LSTM(2, use_scan=True)))(feature)
+
+    data_feature = np.random.rand(1,5,3).astype(np.float32)
+    data_output = np.asarray(model.eval(data_feature))
+
+    # print values for test as ground truth
+    print("Scan input\n", data_feature, "\nScan output\n", data_output)
+
+    Save('test_Scan', model, data_feature, data_output)
 
 def GenSimpleScan():
     feature = C.sequence.input_variable((128,), np.float32)
@@ -184,3 +197,4 @@ if __name__=='__main__':
     GenLSTMx4(use_scan=False)
     GenSimpleScan()
     GenLCBLSTM()
+    GenScan()
