@@ -18,9 +18,7 @@ class ConstantFill final : public OpKernel {
       ONNXRUNTIME_THROW("Missing 'input_as_shape' attribute value");
     }
     if (input_as_shape_) {
-      if (!info.GetAttrs("extra_shape", extra_shape_).IsOK()) {
-        ONNXRUNTIME_THROW("Missing 'extra_shape' attribute value");
-      }
+      extra_shape_ = info.GetAttrsOrDefault<int64_t>("extra_shape", std::vector<int64_t>());
     } else {
       if (!info.GetAttrs("shape", shape_).IsOK()) {
         ONNXRUNTIME_THROW("Missing 'shape' attribute value");
