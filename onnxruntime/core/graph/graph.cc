@@ -1203,7 +1203,7 @@ class InferenceContextImpl : public ONNX_NAMESPACE::InferenceContext {
   void RunInferencing() {
     auto schema = node_.Op();
     if (nullptr != schema) {
-      schema->GetTypeAndShapeInferenceFunction()(*this);
+      //schema->GetTypeAndShapeInferenceFunction()(*this);
     }
   }
 
