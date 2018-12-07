@@ -40,32 +40,11 @@ Status ConstantFill::Compute(OpKernelContext* context) const {
 }
 
 template <typename T>
-std::vector<int64_t> ConstantFill::DimsFromInput(const Tensor* t1) const {
-  std::vector<int64_t> dims;
-  auto* data = t1->Data<T>();
-  for (int64_t i = 0; i < t1->Shape().Size(); ++i) {
-    dims.push_back(static_cast<int64_t>(data[i]));
-  }
-  return dims;
-}
-
-template <typename T>
 Status ConstantFill::ComputeImpl(OpKernelContext* context) const {
   TensorShape shape;
   if (input_as_shape_) {
-    std::vector<int64_t> dims;
     auto* t1 = context->Input<Tensor>(0);
-    if (t1->DataType() == DataTypeImpl::GetType<float>()) {
-      dims = DimsFromInput<float>(t1);
-    } else if (t1->DataType() == DataTypeImpl::GetType<int32_t>()) {
-      dims = DimsFromInput<int32_t>(t1);
-    } else if (t1->DataType() == DataTypeImpl::GetType<int64_t>()) {
-      dims = DimsFromInput<int64_t>(t1);
-    } else if (t1->DataType() == DataTypeImpl::GetType<bool>()) {
-      dims = DimsFromInput<bool>(t1);
-    } else {
-      ONNXRUNTIME_THROW("Unexpected T1 element type");
-    }
+    std::vector<int64_t> dims = t1->Shape().GetDims();
     dims.insert(dims.end(), extra_shape_.begin(), extra_shape_.end());
     shape = TensorShape(dims);
   } else {

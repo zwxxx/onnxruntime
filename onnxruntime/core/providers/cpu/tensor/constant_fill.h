@@ -35,9 +35,6 @@ class ConstantFill final : public OpKernel {
 
  private:
   template <typename T>
-  std::vector<int64_t> DimsFromInput(const Tensor* t1) const;
-
-  template <typename T>
   Status ComputeImpl(OpKernelContext* context) const;
 
   int64_t dtype_;
