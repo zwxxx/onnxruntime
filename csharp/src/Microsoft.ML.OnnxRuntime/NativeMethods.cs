@@ -295,6 +295,13 @@ namespace Microsoft.ML.OnnxRuntime
         public static extern long ONNXRuntimeGetTensorShapeElementCount(IntPtr /*(const struct ONNXRuntimeTensorTypeAndShapeInfo*)*/ typeAndShapeInfo);
 
         [DllImport(nativeLib, CharSet = charSet)]
+        public static extern IntPtr/*(ONNXStatus*)*/ ONNXRuntimeTensorProtoToONNXValue( 
+                                                        IntPtr /*(ONNXRuntimeAllocator*)*/ allocator,
+                                                        byte[] inputBuffer, 
+                                                        int inputLength, 
+                                                        out IntPtr /*(ONNXValue**)*/ onnxValue);
+
+        [DllImport(nativeLib, CharSet = charSet)]
         public static extern void ReleaseONNXValue(IntPtr /*(ONNXValue*)*/ value);
 
         #endregion
