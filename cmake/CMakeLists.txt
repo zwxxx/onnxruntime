@@ -9,6 +9,9 @@ project(onnxruntime C CXX)
 include(CheckCXXCompilerFlag)
 include(CheckLanguage)
 
+# Helper
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set C++14 as standard for the whole project
 set(CMAKE_CXX_STANDARD 14)
 

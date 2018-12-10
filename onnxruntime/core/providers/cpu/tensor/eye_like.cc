@@ -43,10 +43,13 @@ Status EyeLike::Compute(OpKernelContext* context) const {
   }
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnull-dereference"
+
 template <typename T>
 Status EyeLike::ComputeImpl(OpKernelContext* context) const {
-  const Tensor* T1 = context->Input<Tensor>(0);
-  const std::vector<int64_t>& input_dims = T1->Shape().GetDims();
+  const Tensor* t = context->Input<Tensor>(0);
+  const std::vector<int64_t>& input_dims = t->Shape().GetDims();
   if (input_dims.size() != 2) {
     return Status(ONNXRUNTIME, INVALID_ARGUMENT, "EyeLike : Input tensor dimension is not 2");
   }
@@ -66,4 +69,5 @@ Status EyeLike::ComputeImpl(OpKernelContext* context) const {
 
   return Status::OK();
 }
+#pragma GCC diagnostic pop
 }  // namespace onnxruntime

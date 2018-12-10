@@ -447,6 +447,7 @@ Status Tokenizer::SeparatorTokenize(OpKernelContext* ctx,
   return Status::OK();
 }
 
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 Status Tokenizer::Compute(OpKernelContext* ctx) const {
   // Get input buffer ptr
   auto X = ctx->Input<Tensor>(0);

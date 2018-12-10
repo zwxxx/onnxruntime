@@ -203,6 +203,7 @@ StringNormalizer::StringNormalizer(const OpKernelInfo& info) : OpKernel(info),
   }
 }
 
+#pragma GCC diagnostic ignored "-Wnull-dereference"
 Status StringNormalizer::Compute(OpKernelContext* ctx) const {
   using namespace string_normalizer;
 
