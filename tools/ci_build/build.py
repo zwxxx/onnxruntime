@@ -271,7 +271,6 @@ def generate_build_tree(cmake_path, source_dir, build_dir, cuda_home, cudnn_home
 
         if args.use_tvm:
             os.environ["PATH"] += os.pathsep + os.path.join(config_build_dir, "external", "tvm", config)
-
         run_subprocess(cmake_args  + ["-DCMAKE_BUILD_TYPE={}".format(config)], cwd=config_build_dir)
         #create a shortcut for test models if there is a 'models' folder in build_dir
         if is_windows():
@@ -503,9 +502,6 @@ def main():
             toolset += ',version=' + args.msvc_toolset
 
         cmake_extra_args = ['-A','x64','-T', toolset, '-G', 'Visual Studio 15 2017']
-
-    #Add python to PATH. Please remove this after https://github.com/onnx/onnx/issues/1080 is fixed ()
-    os.environ["PATH"] = os.path.dirname(sys.executable) + os.pathsep + os.environ["PATH"]
 
     if (args.update):
         if is_ubuntu_1604():
